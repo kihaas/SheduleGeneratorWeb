@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎓 Генератор расписания</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/min.css">
+    <link rel="stylesheet" href="/static/css/font.woff2">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1><i class="fas fa-graduation-cap"></i> Расписание</h1>
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <!-- Группы -->
+                <div class="nav-section">
+                    <div class="nav-section-header" data-section="groups">
+                        <i class="fas fa-users"></i>
+                        <span>Группы</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="nav-section-content" id="groupsContent">
+                        <div class="form-group">
+                            <label>Текущая группа:</label>
+                            <select id="groupSelector" class="form-control">
+                                <option value="">Загрузка...</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button class="btn-primary btn-small" onclick="app.createGroup()" style="flex: 1;">
+                                <i class="fas fa-plus"></i> Новая
+                            </button>
+                            <button class="btn-secondary btn-small" onclick="app.renameGroup()" style="flex: 1;">
+                                <i class="fas fa-edit"></i> Переимен.
+                            </button>
+                        </div>
+                        <button class="btn-danger btn-small" onclick="app.deleteCurrentGroup()" style="width: 100%; margin-top: 5px;">
+                            <i class="fas fa-trash"></i> Удалить группу
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Статистика -->
+                <div class="nav-section">
+                    <div class="nav-section-header" data-section="statistics">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Статистика</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="nav-section-content" id="statisticsContent">
+                        <div class="stats-cards">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statSubjects">0</div>
+                                <div class="stat-label">Предметы</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTotalHours">0</div>
+                                <div class="stat-label">Всего часов</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statRemainingHours">0</div>
+                                <div class="stat-label">Осталось часов</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Преподаватели -->
+                <div class="nav-section">
+                    <div class="nav-section-header" data-section="teachers">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Преподаватели</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="nav-section-content" id="teachersContent">
+                        <form class="compact-form" id="addTeacherForm">
+                            <div class="form-group">
+                                <label>ФИО преподавателя:</label>
+                                <input type="text" name="name" placeholder="Иванов И.И." required>
+                            </div>
+                            <button type="submit" class="btn-primary btn-small">
+                                <i class="fas fa-plus"></i> Добавить преподавателя
+                            </button>
+                        </form>
+
+                        <div class="teachers-list compact-list" id="teachersList">
+                            <!-- Список преподавателей будет здесь -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Предметы -->
+                <div class="nav-section">
+                    <div class="nav-section-header" data-section="subjects">
+                        <i class="fas fa-book"></i>
+                        <span>Предметы</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="nav-section-content" id="subjectsContent">
+                        <form class="compact-form" id="addSubjectForm">
+                            <div class="form-group">
+                                <label>Преподаватель:</label>
+                                <select name="teacher" id="teacherSelect" required>
+                                    <option value="">Выберите преподавателя</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Предмет:</label>
+                                <input type="text" name="subject_name" placeholder="Название предмета" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Часы:</label>
+                                <input type="number" name="hours" value="4" min="2" step="2" required>
+                            </div>
+<div class="form-group">
+        <label>Приоритет:</label>
+        <input type="number" name="priority" value="0" min="0" max="10">
+    </div>
+    <div class="form-group">
+        <label>Макс. пар в день:</label>
+        <input type="number" name="max_per_day" value="2" min="1" max="4">
+    </div>
+
+    <div class="form-group">
+        <label><i class="fas fa-calendar-week"></i> Недельные квоты:</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+                <label style="font-size: 0.8rem;">Минимум пар в неделю:</label>
+                <input type="number" name="min_per_week" value="0" min="0" max="20" style="width: 100%;">
+                <small style="font-size: 0.7rem; color: var(--secondary);">0 = не обязательно</small>
+            </div>
+            <div>
+                <label style="font-size: 0.8rem;">Максимум пар в неделю:</label>
+                <input type="number" name="max_per_week" value="20" min="1" max="20" style="width: 100%;">
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn-primary btn-small">
+        <i class="fas fa-plus"></i> Добавить предмет
+    </button>
+</form>
+
+                        <div class="subjects-list compact-list" id="subjectsList">
+                            <!-- Список предметов будет здесь -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ограничения -->
+                <div class="nav-section">
+                    <div class="nav-section-header" data-section="filters">
+                        <i class="fas fa-ban"></i>
+                        <span>Ограничения</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="nav-section-content" id="filtersContent">
+                        <form class="compact-form" id="addFilterForm">
+                            <div class="form-group">
+                                <label>Преподаватель:</label>
+                                <select name="teacher" id="filterTeacherSelect" required>
+                                    <option value="">Выберите преподавателя</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Запрещенные дни:</label>
+                                <div class="checkbox-grid">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_days" value="0">
+                                        <span class="day-badge">Пн</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_days" value="1">
+                                        <span class="day-badge">Вт</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_days" value="2">
+                                        <span class="day-badge">Ср</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_days" value="3">
+                                        <span class="day-badge">Чт</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_days" value="4">
+                                        <span class="day-badge">Пт</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Запрещенные пары:</label>
+                                <div class="checkbox-grid">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_slots" value="0">
+                                        <span class="slot-badge">1</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_slots" value="1">
+                                        <span class="slot-badge">2</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_slots" value="2">
+                                        <span class="slot-badge">3</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="restricted_slots" value="3">
+                                        <span class="slot-badge">4</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-secondary btn-small">
+                                <i class="fas fa-save"></i> Сохранить ограничения
+                            </button>
+                        </form>
+
+                        <div class="filters-list compact-list" id="filtersList">
+                            <!-- Список ограничений будет здесь -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Сохраненные расписания -->
+                <div class="nav-section">
+                    <div class="nav-section-header" data-section="saved">
+                        <i class="fas fa-history"></i>
+                        <span>Сохраненные</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="nav-section-content" id="savedContent">
+                        <form class="compact-form" id="saveScheduleForm">
+                            <div class="form-group">
+                                <label>Название расписания:</label>
+                                <input type="text" name="name" placeholder="Расписание на сентябрь" required>
+                            </div>
+                            <button type="submit" class="btn-success btn-small">
+                                <i class="fas fa-save"></i> Сохранить текущее
+                            </button>
+                        </form>
+
+                        <div class="saved-schedules-list compact-list" id="savedSchedulesList">
+                            <!-- Список сохраненных расписаний -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Управление -->
+                <div class="nav-section">
+                    <div class="nav-section-header" data-section="management">
+                        <i class="fas fa-cog"></i>
+                        <span>Управление</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="nav-section-content" id="managementContent">
+                        <button class="btn-generate" id="generateSchedule">
+                            <i class="fas fa-magic"></i> Сгенерировать расписание
+                        </button>
+                        <button class="btn-danger btn-small" id="clearAll">
+                            <i class="fas fa-trash"></i> Очистить всё
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-title">
+                    <h2>Расписание занятий</h2>
+                    <p>Недельное расписание с автоматической генерацией</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary" id="fullGenerate">
+                        <i class="fas fa-bolt"></i> Быстрая генерация
+                    </button>
+                </div>
+            </header>
+
+            <!-- Schedule -->
+            <div class="schedule-container">
+                <div class="schedule" id="scheduleGrid">
+                    <!-- Расписание будет здесь -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-item" data-action="delete">
+            <i class="fas fa-trash"></i> Удалить пару
+        </div>
+        <div class="context-item" data-action="replace">
+            <i class="fas fa-exchange-alt"></i> Заменить предмет
+        </div>
+    </div>
+
+    <!-- Replace Lesson Modal -->
+    <div class="modal" id="replaceModal">
+        <div class="modal-content compact-modal">
+            <div class="modal-header">
+                <h3>Заменить пару</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="replaceForm">
+                    <div class="form-group">
+                        <label>Выберите предмет:</label>
+                        <select name="subject_id" id="replaceSubjectSelect" required>
+                            <option value="">Выберите предмет из списка</option>
+                        </select>
+                    </div>
+                    <div class="selected-subject-info" id="selectedSubjectInfo" style="display: none; margin-top: 10px; padding: 10px; background: var(--light); border-radius: 6px;">
+                        <div><strong>Преподаватель:</strong> <span id="infoTeacher"></span></div>
+                        <div><strong>Часы:</strong> <span id="infoHours"></span></div>
+                        <div><strong>Осталось пар:</strong> <span id="infoRemainingPairs"></span></div>
+                    </div>
+                    <input type="hidden" name="day" id="replaceDay">
+                    <input type="hidden" name="time_slot" id="replaceTimeSlot">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelReplace">Отмена</button>
+                <button class="btn-primary" id="confirmReplace">Заменить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Schedule Modal -->
+    <div class="modal" id="saveModal">
+        <div class="modal-content compact-modal">
+            <div class="modal-header">
+                <h3>Сохранить расписание</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="saveForm">
+                    <div class="form-group">
+                        <label>Название расписания:</label>
+                        <input type="text" name="name" placeholder="Расписание на сентябрь" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelSave">Отмена</button>
+                <button class="btn-primary" id="confirmSave">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div class="modal" id="createGroupModal">
+        <div class="modal-content compact-modal">
+            <div class="modal-header">
+                <h3>Создать новую группу</h3>
+                <span class="close" onclick="app.closeCreateGroupModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="createGroupForm">
+                    <div class="form-group">
+                        <label>Название группы:</label>
+                        <input type="text" id="newGroupName" placeholder="РПО-1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="app.closeCreateGroupModal()">Отмена</button>
+                <button class="btn-primary" onclick="app.confirmCreateGroup()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Group Modal -->
+    <div class="modal" id="renameGroupModal">
+        <div class="modal-content compact-modal">
+            <div class="modal-header">
+                <h3>Переименовать группу</h3>
+                <span class="close" onclick="app.closeRenameGroupModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="renameGroupForm">
+                    <div class="form-group">
+                        <label>Новое название:</label>
+                        <input type="text" id="renameGroupName" placeholder="Новое название" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="app.closeRenameGroupModal()">Отмена</button>
+                <button class="btn-primary" onclick="app.confirmRenameGroup()">Переименовать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+        <p>Генерация расписания...</p>
+    </div>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggle">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
