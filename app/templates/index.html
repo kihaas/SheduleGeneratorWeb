@@ -1,20 +1,229 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎓 Генератор расписания</title>
+
+    <!-- Тема применяется ДО рендера чтобы не было мигания -->
+    <script>
+        (function() {
+            var t = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/min.css">
-    <link rel="stylesheet" href="/static/css/font.woff2">
+
+    <style>
+        /* ===== ТОПБАР ===== */
+        .app-topbar {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+
+        [data-theme="dark"] .app-topbar {
+            background: #1e293b;
+            border-bottom-color: #334155;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .topbar-guest-badge {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fde68a;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        [data-theme="dark"] .topbar-guest-badge {
+            background: #292016;
+            border-color: #78350f;
+            color: #fbbf24;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .topbar-user i { font-size: 1.25rem; color: var(--primary); }
+
+        .btn-topbar {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1;
+        }
+
+        .btn-topbar-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--dark);
+        }
+
+        .btn-topbar-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+        [data-theme="dark"] .btn-topbar-outline { border-color: #475569; }
+
+        .btn-topbar-primary { background: var(--primary); color: white !important; }
+        .btn-topbar-primary:hover { background: var(--primary-hover); }
+
+        /* Гостевой баннер */
+        .guest-banner {
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            border-bottom: 1px solid #fde68a;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            color: #92400e;
+            flex-shrink: 0;
+            gap: 12px;
+        }
+
+        [data-theme="dark"] .guest-banner {
+            background: linear-gradient(135deg, #1c1708, #221d09);
+            border-bottom-color: #78350f;
+            color: #fbbf24;
+        }
+
+        .guest-banner-text { display: flex; align-items: center; gap: 7px; }
+
+        .guest-banner a {
+            font-weight: 600;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .guest-banner a:hover { text-decoration: underline; }
+
+        /* Обёртка всего приложения */
+        .app-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* app-container занимает оставшееся место */
+        .app-container {
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+    </style>
 </head>
 <body>
+<div class="app-wrapper">
+
+    <!-- ===== ТОПБАР (единственный логотип здесь) ===== -->
+    <div class="app-topbar">
+        <div class="topbar-left">
+            <a href="/" class="topbar-brand">
+                <i class="fas fa-graduation-cap"></i>
+                ScheduleGenerator
+            </a>
+            {% if not user %}
+            <div class="topbar-guest-badge">
+                <i class="fas fa-eye"></i>
+                Гостевой режим
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="topbar-right">
+            {% if user %}
+            <div class="topbar-user">
+                <i class="fas fa-user-circle"></i>
+                <span>{{ user.username }}</span>
+            </div>
+            <button onclick="logoutUser()" class="btn-topbar btn-topbar-outline">
+                <i class="fas fa-sign-out-alt"></i>
+                Выйти
+            </button>
+            {% else %}
+            <a href="/login"    class="btn-topbar btn-topbar-outline">
+                <i class="fas fa-sign-in-alt"></i> Войти
+            </a>
+            <a href="/register" class="btn-topbar btn-topbar-primary">
+                <i class="fas fa-user-plus"></i> Регистрация
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not user %}
+    <div class="guest-banner">
+        <div class="guest-banner-text">
+            <i class="fas fa-info-circle"></i>
+            Гостевой режим — данные сотрутся при перезагрузке.
+        </div>
+        <div>
+            <a href="/login">Войти</a> или <a href="/register">Зарегистрироваться</a> для сохранения данных.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== РАБОЧАЯ ПЛОСКОСТЬ ===== -->
     <div class="app-container">
-        <!-- Sidebar -->
         <aside class="sidebar">
+            <!-- sidebar-header БЕЗ названия бренда — только кнопка сворачивания -->
             <div class="sidebar-header">
-                <h1><i class="fas fa-graduation-cap"></i> Расписание</h1>
-                <button class="sidebar-toggle" id="sidebarToggle">
+                <button class="sidebar-toggle" id="sidebarToggle" title="Свернуть/развернуть">
                     <i class="fas fa-bars"></i>
                 </button>
             </div>
@@ -90,10 +299,7 @@
                                 <i class="fas fa-plus"></i> Добавить преподавателя
                             </button>
                         </form>
-
-                        <div class="teachers-list compact-list" id="teachersList">
-                            <!-- Список преподавателей будет здесь -->
-                        </div>
+                        <div class="teachers-list compact-list" id="teachersList"></div>
                     </div>
                 </div>
 
@@ -120,38 +326,33 @@
                                 <label>Часы:</label>
                                 <input type="number" name="hours" value="4" min="2" step="2" required>
                             </div>
-<div class="form-group">
-        <label>Приоритет:</label>
-        <input type="number" name="priority" value="0" min="0" max="10">
-    </div>
-    <div class="form-group">
-        <label>Макс. пар в день:</label>
-        <input type="number" name="max_per_day" value="2" min="1" max="4">
-    </div>
-
-    <div class="form-group">
-        <label><i class="fas fa-calendar-week"></i> Недельные квоты:</label>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div>
-                <label style="font-size: 0.8rem;">Минимум пар в неделю:</label>
-                <input type="number" name="min_per_week" value="0" min="0" max="20" style="width: 100%;">
-                <small style="font-size: 0.7rem; color: var(--secondary);">0 = не обязательно</small>
-            </div>
-            <div>
-                <label style="font-size: 0.8rem;">Максимум пар в неделю:</label>
-                <input type="number" name="max_per_week" value="20" min="1" max="20" style="width: 100%;">
-            </div>
-        </div>
-    </div>
-
-    <button type="submit" class="btn-primary btn-small">
-        <i class="fas fa-plus"></i> Добавить предмет
-    </button>
-</form>
-
-                        <div class="subjects-list compact-list" id="subjectsList">
-                            <!-- Список предметов будет здесь -->
-                        </div>
+                            <div class="form-group">
+                                <label>Приоритет:</label>
+                                <input type="number" name="priority" value="0" min="0" max="10">
+                            </div>
+                            <div class="form-group">
+                                <label>Макс. пар в день:</label>
+                                <input type="number" name="max_per_day" value="2" min="1" max="4">
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-calendar-week"></i> Недельные квоты:</label>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div>
+                                        <label style="font-size: 0.8rem;">Мин. пар в неделю:</label>
+                                        <input type="number" name="min_per_week" value="0" min="0" max="20" style="width: 100%;">
+                                        <small style="font-size: 0.7rem; color: var(--secondary);">0 = не обязательно</small>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.8rem;">Макс. пар в неделю:</label>
+                                        <input type="number" name="max_per_week" value="20" min="1" max="20" style="width: 100%;">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary btn-small">
+                                <i class="fas fa-plus"></i> Добавить предмет
+                            </button>
+                        </form>
+                        <div class="subjects-list compact-list" id="subjectsList"></div>
                     </div>
                 </div>
 
@@ -173,57 +374,27 @@
                             <div class="form-group">
                                 <label>Запрещенные дни:</label>
                                 <div class="checkbox-grid">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_days" value="0">
-                                        <span class="day-badge">Пн</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_days" value="1">
-                                        <span class="day-badge">Вт</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_days" value="2">
-                                        <span class="day-badge">Ср</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_days" value="3">
-                                        <span class="day-badge">Чт</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_days" value="4">
-                                        <span class="day-badge">Пт</span>
-                                    </label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_days" value="0"><span class="day-badge">Пн</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_days" value="1"><span class="day-badge">Вт</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_days" value="2"><span class="day-badge">Ср</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_days" value="3"><span class="day-badge">Чт</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_days" value="4"><span class="day-badge">Пт</span></label>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label>Запрещенные пары:</label>
                                 <div class="checkbox-grid">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_slots" value="0">
-                                        <span class="slot-badge">1</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_slots" value="1">
-                                        <span class="slot-badge">2</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_slots" value="2">
-                                        <span class="slot-badge">3</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" name="restricted_slots" value="3">
-                                        <span class="slot-badge">4</span>
-                                    </label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_slots" value="0"><span class="slot-badge">1</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_slots" value="1"><span class="slot-badge">2</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_slots" value="2"><span class="slot-badge">3</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" name="restricted_slots" value="3"><span class="slot-badge">4</span></label>
                                 </div>
                             </div>
                             <button type="submit" class="btn-secondary btn-small">
                                 <i class="fas fa-save"></i> Сохранить ограничения
                             </button>
                         </form>
-
-                        <div class="filters-list compact-list" id="filtersList">
-                            <!-- Список ограничений будет здесь -->
-                        </div>
+                        <div class="filters-list compact-list" id="filtersList"></div>
                     </div>
                 </div>
 
@@ -235,6 +406,7 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="nav-section-content" id="savedContent">
+                        {% if user %}
                         <form class="compact-form" id="saveScheduleForm">
                             <div class="form-group">
                                 <label>Название расписания:</label>
@@ -244,10 +416,17 @@
                                 <i class="fas fa-save"></i> Сохранить текущее
                             </button>
                         </form>
-
-                        <div class="saved-schedules-list compact-list" id="savedSchedulesList">
-                            <!-- Список сохраненных расписаний -->
+                        {% else %}
+                        <div style="text-align:center; padding: 12px 4px; color: var(--secondary); font-size: 0.82rem; line-height: 1.6;">
+                            <i class="fas fa-lock" style="color: var(--warning); margin-bottom: 8px; font-size: 1.1rem; display:block;"></i>
+                            Сохранение доступно только авторизованным пользователям.
+                            <br>
+                            <a href="/login" style="color:var(--primary); font-weight:600; text-decoration:none;">Войти</a>
+                            &nbsp;или&nbsp;
+                            <a href="/register" style="color:var(--primary); font-weight:600; text-decoration:none;">Зарегистрироваться</a>
                         </div>
+                        {% endif %}
+                        <div class="saved-schedules-list compact-list" id="savedSchedulesList"></div>
                     </div>
                 </div>
 
@@ -270,9 +449,7 @@
             </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
             <header class="content-header">
                 <div class="header-title">
                     <h2>Расписание занятий</h2>
@@ -285,133 +462,175 @@
                 </div>
             </header>
 
-            <!-- Schedule -->
             <div class="schedule-container">
-                <div class="schedule" id="scheduleGrid">
-                    <!-- Расписание будет здесь -->
-                </div>
+                <div class="schedule" id="scheduleGrid"></div>
             </div>
         </main>
     </div>
 
-    <!-- Context Menu -->
-    <div class="context-menu" id="contextMenu">
-        <div class="context-item" data-action="delete">
-            <i class="fas fa-trash"></i> Удалить пару
-        </div>
-        <div class="context-item" data-action="replace">
-            <i class="fas fa-exchange-alt"></i> Заменить предмет
-        </div>
-    </div>
+</div><!-- /.app-wrapper -->
 
-    <!-- Replace Lesson Modal -->
-    <div class="modal" id="replaceModal">
-        <div class="modal-content compact-modal">
-            <div class="modal-header">
-                <h3>Заменить пару</h3>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="replaceForm">
-                    <div class="form-group">
-                        <label>Выберите предмет:</label>
-                        <select name="subject_id" id="replaceSubjectSelect" required>
-                            <option value="">Выберите предмет из списка</option>
-                        </select>
-                    </div>
-                    <div class="selected-subject-info" id="selectedSubjectInfo" style="display: none; margin-top: 10px; padding: 10px; background: var(--light); border-radius: 6px;">
-                        <div><strong>Преподаватель:</strong> <span id="infoTeacher"></span></div>
-                        <div><strong>Часы:</strong> <span id="infoHours"></span></div>
-                        <div><strong>Осталось пар:</strong> <span id="infoRemainingPairs"></span></div>
-                    </div>
-                    <input type="hidden" name="day" id="replaceDay">
-                    <input type="hidden" name="time_slot" id="replaceTimeSlot">
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" id="cancelReplace">Отмена</button>
-                <button class="btn-primary" id="confirmReplace">Заменить</button>
-            </div>
+<!-- Контекстное меню -->
+<div class="context-menu" id="contextMenu">
+    <div class="context-item" data-action="delete"><i class="fas fa-trash"></i> Удалить пару</div>
+    <div class="context-item" data-action="replace"><i class="fas fa-exchange-alt"></i> Заменить предмет</div>
+</div>
+
+<!-- Модальные окна -->
+<div class="modal" id="replaceModal">
+    <div class="modal-content compact-modal">
+        <div class="modal-header">
+            <h3>Заменить пару</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="replaceForm">
+                <div class="form-group">
+                    <label>Выберите предмет:</label>
+                    <select name="subject_id" id="replaceSubjectSelect" required>
+                        <option value="">Выберите предмет из списка</option>
+                    </select>
+                </div>
+                <div class="selected-subject-info" id="selectedSubjectInfo" style="display:none; margin-top:10px; padding:10px; background:var(--light); border-radius:6px;">
+                    <div><strong>Преподаватель:</strong> <span id="infoTeacher"></span></div>
+                    <div><strong>Часы:</strong> <span id="infoHours"></span></div>
+                    <div><strong>Осталось пар:</strong> <span id="infoRemainingPairs"></span></div>
+                </div>
+                <input type="hidden" name="day" id="replaceDay">
+                <input type="hidden" name="time_slot" id="replaceTimeSlot">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" id="cancelReplace">Отмена</button>
+            <button class="btn-primary" id="confirmReplace">Заменить</button>
         </div>
     </div>
+</div>
 
-    <!-- Save Schedule Modal -->
-    <div class="modal" id="saveModal">
-        <div class="modal-content compact-modal">
-            <div class="modal-header">
-                <h3>Сохранить расписание</h3>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="saveForm">
-                    <div class="form-group">
-                        <label>Название расписания:</label>
-                        <input type="text" name="name" placeholder="Расписание на сентябрь" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" id="cancelSave">Отмена</button>
-                <button class="btn-primary" id="confirmSave">Сохранить</button>
-            </div>
+<div class="modal" id="saveModal">
+    <div class="modal-content compact-modal">
+        <div class="modal-header">
+            <h3>Сохранить расписание</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="saveForm">
+                <div class="form-group">
+                    <label>Название расписания:</label>
+                    <input type="text" name="name" placeholder="Расписание на сентябрь" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" id="cancelSave">Отмена</button>
+            <button class="btn-primary" id="confirmSave">Сохранить</button>
         </div>
     </div>
+</div>
 
-    <!-- Create Group Modal -->
-    <div class="modal" id="createGroupModal">
-        <div class="modal-content compact-modal">
-            <div class="modal-header">
-                <h3>Создать новую группу</h3>
-                <span class="close" onclick="app.closeCreateGroupModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="createGroupForm">
-                    <div class="form-group">
-                        <label>Название группы:</label>
-                        <input type="text" id="newGroupName" placeholder="РПО-1" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="app.closeCreateGroupModal()">Отмена</button>
-                <button class="btn-primary" onclick="app.confirmCreateGroup()">Создать</button>
-            </div>
+<div class="modal" id="createGroupModal">
+    <div class="modal-content compact-modal">
+        <div class="modal-header">
+            <h3>Создать новую группу</h3>
+            <span class="close" onclick="app.closeCreateGroupModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="createGroupForm">
+                <div class="form-group">
+                    <label>Название группы:</label>
+                    <input type="text" id="newGroupName" placeholder="РПО-1" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="app.closeCreateGroupModal()">Отмена</button>
+            <button class="btn-primary" onclick="app.confirmCreateGroup()">Создать</button>
         </div>
     </div>
+</div>
 
-    <!-- Rename Group Modal -->
-    <div class="modal" id="renameGroupModal">
-        <div class="modal-content compact-modal">
-            <div class="modal-header">
-                <h3>Переименовать группу</h3>
-                <span class="close" onclick="app.closeRenameGroupModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="renameGroupForm">
-                    <div class="form-group">
-                        <label>Новое название:</label>
-                        <input type="text" id="renameGroupName" placeholder="Новое название" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="app.closeRenameGroupModal()">Отмена</button>
-                <button class="btn-primary" onclick="app.confirmRenameGroup()">Переименовать</button>
-            </div>
+<div class="modal" id="renameGroupModal">
+    <div class="modal-content compact-modal">
+        <div class="modal-header">
+            <h3>Переименовать группу</h3>
+            <span class="close" onclick="app.closeRenameGroupModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="renameGroupForm">
+                <div class="form-group">
+                    <label>Новое название:</label>
+                    <input type="text" id="renameGroupName" placeholder="Новое название" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="app.closeRenameGroupModal()">Отмена</button>
+            <button class="btn-primary" onclick="app.confirmRenameGroup()">Переименовать</button>
         </div>
     </div>
+</div>
 
-    <!-- Loading Spinner -->
-    <div class="loading-spinner" id="loadingSpinner">
-        <div class="spinner"></div>
-        <p>Генерация расписания...</p>
-    </div>
+<div class="loading-spinner" id="loadingSpinner">
+    <div class="spinner"></div>
+    <p>Генерация расписания...</p>
+</div>
 
-    <!-- Theme Toggle -->
-    <button class="theme-toggle" id="themeToggle">
-        <i class="fas fa-moon"></i>
-    </button>
+<!-- Кнопка смены темы -->
+<button class="theme-toggle" id="themeToggle" title="Переключить тему">
+    <i class="fas fa-moon" id="themeIcon"></i>
+</button>
 
-    <script src="/static/js/main.js"></script>
+<!-- Передаём статус пользователя в JS -->
+<script>
+    window.IS_AUTHENTICATED = {{ 'true' if user else 'false' }};
+    window.CURRENT_USER     = {{ user | tojson if user else 'null' }};
+</script>
+
+<script>
+    // ===== ФУНКЦИЯ ВЫХОДА =====
+    async function logoutUser() {
+        try { await fetch('/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
+        window.location.href = '/login';
+    }
+</script>
+
+<!-- main.js загружается последним; setupThemeToggle() внутри него мы переопределяем ниже -->
+<script src="../static/js/main.js"></script>
+
+<script>
+    /**
+     * Перезаписываем setupThemeToggle из main.js — централизованная логика темы.
+     * Вызываем ПОСЛЕ загрузки main.js чтобы перекрыть его версию.
+     *
+     * Почему: main.js вешает свой listener на #themeToggle через setupThemeToggle(),
+     * который вызывается в конструкторе ScheduleApp. Мы удаляем старый listener
+     * и вешаем правильный.
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        var btn  = document.getElementById('themeToggle');
+        var icon = document.getElementById('themeIcon');
+
+        if (!btn || !icon) return;
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            icon.className = (theme === 'dark') ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        // Применяем сохранённую тему (уже применена в <head>, но иконку нужно обновить)
+        applyTheme(localStorage.getItem('theme') || 'light');
+
+        // Клонируем кнопку чтобы снять ВСЕ старые обработчики (включая из main.js)
+        var newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        icon = newBtn.querySelector('#themeIcon') || newBtn.querySelector('i');
+
+        newBtn.addEventListener('click', function() {
+            var cur = document.documentElement.getAttribute('data-theme') || 'light';
+            applyTheme(cur === 'dark' ? 'light' : 'dark');
+        });
+    });
+</script>
 </body>
 </html>

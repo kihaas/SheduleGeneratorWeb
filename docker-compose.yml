@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: schedule_generator
+
+    # Порт: хост:контейнер
+    ports:
+      - "8000:8000"
+
+    # Переменные окружения — секреты лучше вынести в .env файл
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - PYTHONUNBUFFERED=1
+
+    # Монтируем папку с БД наружу чтобы данные не терялись при пересборке
+    volumes:
+      - ./data:/app/data          # Папка с SQLite базой
+      - ./app:/app/app            # Код приложения (удобно для разработки)
+      - ./schedule.sql:/app/schedule.sql  # БД если лежит в корне
+
+    # Перезапускаем если упало
+    restart: unless-stopped
+
+    # Healthcheck — Docker будет знать жив ли контейнер
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Именованные volumes (альтернатива bind mount)
+volumes:
+  app_data:

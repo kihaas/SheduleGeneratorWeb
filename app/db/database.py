@@ -4,9 +4,11 @@ import os
 
 
 class Database:
-    def __init__(self, db_path: str = "schedule.sql"):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            db_path = os.getenv("DB_PATH", "data/schedule.sql")
         self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(exist_ok=True)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = None
         self._initialized = False
 
