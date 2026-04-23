@@ -30,14 +30,17 @@ if parent_dir not in sys.path:
 # ====================== LIFESPAN ======================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Инициализация базы данных...")
+    print("🚀 Запуск приложения...")
     try:
         await database.init_db()
-        print("✅ База данных готова")
+        print("✅ База данных готова к работе")
     except Exception as e:
-        print(f"❌ Ошибка инициализации БД: {e}")
+        print(f"❌ Критическая ошибка инициализации БД: {e}")
+        import traceback
+        print(traceback.format_exc())
+        raise
     yield
-
+    print("👋 Приложение остановлено")
 
 # ====================== СОЗДАНИЕ ПРИЛОЖЕНИЯ ======================
 app = FastAPI(
